@@ -74,10 +74,15 @@
   <ItemGroup>
     <Compile Include="Main.cs" />
     <Compile Include="AppDelegate.cs" />
-    <Compile Include="ViewController.cs" />
-    <Compile Include="ViewController.designer.cs">
-      <DependentUpon>ViewController.cs</DependentUpon>
+    <Compile Include="ViewControllerReleaseWhenClosed.cs" />
+    <Compile Include="ViewControllerReleaseWhenClosed.designer.cs">
+      <DependentUpon>ViewControllerReleaseWhenClosed.cs</DependentUpon>
     </Compile>
+    <Compile Include="ViewControllerNotReleaseWhenClosed.cs" />
+    <Compile Include="ViewControllerNotReleaseWhenClosed.designer.cs">
+      <DependentUpon>ViewControllerNotReleaseWhenClosed.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FinalizableView.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />
