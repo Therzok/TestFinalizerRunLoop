@@ -53,7 +53,9 @@ namespace TestFinalizerRunloop
         {
             button.Activated -= Button_Activated;
             button.Target = null;
+
             Console.WriteLine("ViewDidDisappear");
+
             base.ViewDidDisappear();
         }
 
@@ -100,27 +102,10 @@ namespace TestFinalizerRunloop
             // This crashes.
             var controller = window.WindowController;
             controller.BeginInvokeOnMainThread(new Selector("close"), this);
-
-            _ = WaitForGC();
-        }
-
-        static async Task WaitForGC()
-        {
-            while (true)
-            {
-                await Task.Delay(1000);
-
-                using var pool = new NSAutoreleasePool();
-
-                System.GC.Collect();
-                System.GC.WaitForPendingFinalizers();
-            }
         }
 
         void StressTestGC()
         {
-
-
             Console.WriteLine("Creating views");
             Task.Run(() =>
             {
