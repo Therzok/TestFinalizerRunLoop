@@ -1,50 +1,111 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using AppKit;
 using CoreFoundation;
+using CoreGraphics;
 using Foundation;
+using ObjCRuntime;
 
 namespace TestFinalizerRunloop
 {
     [Register("AppDelegate")]
     public class AppDelegate : NSApplicationDelegate
     {
+        List<NSObject> _observers = new List<NSObject>();
+        WindowController[] _controllers;
+        NSWindow[] _windows;
+
         public AppDelegate()
         {
         }
 
         [DllImport(ObjCRuntime.Constants.ObjectiveCLibrary)]
-        static extern void objc_msgSend(IntPtr handle, IntPtr sel, IntPtr value);
+        public static extern void objc_msgSend(IntPtr handle, IntPtr sel, IntPtr value);
+
+        [DllImport(ObjCRuntime.Constants.ObjectiveCLibrary)]
+        public static extern IntPtr objc_msgSend(IntPtr handle, IntPtr sel);
 
         public override void DidFinishLaunching(NSNotification notification)
         {
-            NSWindowController controller;
+            //NSWindowController[] _controllers;
+            //NSWindow[] _windows;
 
-            controller = NSStoryboard.MainStoryboard.InstantiateControllerWithIdentifier("ReleaseWhenClosed") as NSWindowController;
-            controller.ShowWindow(this);
-
-            controller = NSStoryboard.MainStoryboard.InstantiateControllerWithIdentifier("NotReleaseWhenClosed") as NSWindowController;
-            controller.ShowWindow(this);
-
-            NSNotificationCenter.DefaultCenter.AddObserver(NSWindow.WillCloseNotification, notif =>
+            _windows = new[]
             {
-                var wnd = (NSWindow)notif.Object;
+                new MyWindow(new CGRect(400, 400, 400, 400))
+                {
+                    Title = "ReleaseWhenClosed",
+                    BackgroundColor = NSColor.Red,
+                },
+                new MyWindow(new CGRect(800, 400, 400, 400))
+                {
+                    Title = "Normal",
+                    BackgroundColor = NSColor.Blue,
+                },
+            };
+
+            _controllers = Array.ConvertAll(_windows, x => new WindowController(x));
+
+            foreach (var controller in _controllers)
+            {
+                var window = controller.Window;
+                window.ReleasedWhenClosed = true;
+
+                objc_msgSend(window.Handle, Selector.GetHandle("setDelegate:"), controller.Handle);
+                objc_msgSend(window.Handle, Selector.GetHandle("setWindowController:"), controller.Handle);
+
+                // this causes ref cycle
+                //controller.Window.WeakDelegate = controller;
+
+                
+                var viewController = new ViewController(window.ContentView);
+                controller.ContentViewController = viewController;
+            }
+
+            var observer = NSWindow.Notifications.ObserveWillClose(static (sender, args) =>
+            {
+                var wnd = (NSWindow)args.Notification.Object;
+                Console.WriteLine("Controller {0}", wnd.WindowController);
                 Console.WriteLine("Closing {0} - ReleaseWhenClosed {1}", wnd, wnd.ReleasedWhenClosed);
+
+                //var del = (AppDelegate)NSApplication.SharedApplication.Delegate;
+                //for (int i = 0; i < del._controllers.Length; ++i)
+                //{
+                //    ref var controller = ref del._controllers[i];
+                //    if (controller == wnd.WindowController)
+                //    {
+                //        controller = null;
+                //    }
+                //}
 
                 //objc_msgSend(wnd.Handle, ObjCRuntime.Selector.GetHandle("setContentView:"), IntPtr.Zero);
                 //wnd.ContentView = null; // xammac throws...
             });
+            _observers.Add(observer);
 
-            NSNotificationCenter.DefaultCenter.AddObserver(NSApplication.MainWindowChangedNotification, static notif =>
+            observer = NSApplication.Notifications.ObserveMainWindowChanged(static (sender, args) =>
             {
-                Console.WriteLine("Window changed: {0}", notif.Object);
+                Console.WriteLine("Window changed: {0}", args.Notification.Object);
+            });
+            _observers.Add(observer);
+
+            BeginInvokeOnMainThread(() =>
+            {
+                foreach (var controller in _controllers)
+                {
+                    controller.ShowWindow(this);
+                }
             });
         }
 
         public override bool ApplicationShouldTerminateAfterLastWindowClosed(NSApplication sender)
         {
+            _controllers = Array.Empty<WindowController>();
+            _windows = Array.Empty<MyWindow>();
+
             Console.WriteLine("ShouldTerminate: {0}", sender);
 
             _ = Task.Run(() => WaitForGC());
@@ -60,9 +121,10 @@ namespace TestFinalizerRunloop
 
                     Console.WriteLine("[GC] Running GC...");
 
-                    _ = new int[10_000_000];
+                    for (int i = 0; i < 10; ++i)
+                        _ = new int[10_000_000];
 
-                    System.GC.Collect();
+                    //System.GC.Collect();
 
                     // WaitForPendingFinalizers crashes!
                     //System.GC.WaitForPendingFinalizers();
@@ -70,89 +132,6 @@ namespace TestFinalizerRunloop
             }
         }
 
-        void StressTestGC()
-        {
-            Console.WriteLine("Creating views");
-            Task.Run(() =>
-            {
-
-                for (int n = 0; n < 10000; n++)
-                {
-                    new FinalizerAppKit
-                    {
-                        Child = new FinalizerAppKit
-                        {
-                            Child = new FinalizerAppKit(),
-                        },
-                    };
-                }
-            });
-            Task.Run(() =>
-            {
-                for (int n = 0; n < 10000; n++)
-                {
-                    new FinalizerDispatch
-                    {
-                        Child = new FinalizerDispatch
-                        {
-                            Child = new FinalizerDispatch(),
-                        },
-                    };
-                }
-            });
-            Console.WriteLine("Done");
-        }
-
-        public class FinalizerAppKit : NSObject
-        {
-            static int finalizedCount = 0;
-            static int disposedCount = 0;
-            static readonly NSObject target = new NSObject();
-
-            public FinalizerAppKit Child;
-
-            bool disposed;
-            ~FinalizerAppKit()
-            {
-                if (Interlocked.Increment(ref finalizedCount) % 1000 == 0)
-                    Console.WriteLine("AppKit: {0} {1}", FinalizerAppKit.finalizedCount, FinalizerAppKit.disposedCount);
-
-                target.BeginInvokeOnMainThread(() => Dispose());
-            }
-
-            void Dispose()
-            {
-                disposed = true;
-                if (Interlocked.Increment(ref disposedCount) % 1000 == 0)
-                    Console.WriteLine("AppKit: {0} {1}", FinalizerAppKit.finalizedCount, FinalizerAppKit.disposedCount);
-            }
-        }
-
-        public class FinalizerDispatch : NSObject
-        {
-            static int finalizedCount = 0;
-            static int disposedCount = 0;
-            static readonly DispatchQueue queue = DispatchQueue.MainQueue;
-
-            public FinalizerDispatch Child;
-
-            bool disposed;
-
-            ~FinalizerDispatch()
-            {
-                if (Interlocked.Increment(ref finalizedCount) % 1000 == 0)
-                    Console.WriteLine("Dispatch: {0} {1}", FinalizerDispatch.finalizedCount, FinalizerDispatch.disposedCount);
-
-                queue.DispatchAsync(() => Dispose());
-            }
-
-            void Dispose()
-            {
-                disposed = true;
-                if (Interlocked.Increment(ref disposedCount) % 1000 == 0)
-                    Console.WriteLine("Dispatch: {0} {1}", FinalizerDispatch.finalizedCount, FinalizerDispatch.disposedCount);
-            }
-        }
     }
 }
 

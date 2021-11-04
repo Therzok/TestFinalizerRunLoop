@@ -29,6 +29,10 @@
     <UseSGen>true</UseSGen>
     <UseRefCounting>true</UseRefCounting>
     <Profiling>true</Profiling>
+    <MonoBundlingExtraArgs>--package-debug-symbols:true --marshal-objectivec-exceptions=throwmanagedexception</MonoBundlingExtraArgs>
+    <LinkMode>None</LinkMode>
+    <AOTMode>None</AOTMode>
+    <XamMacArch>x86_64</XamMacArch>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -44,6 +48,8 @@
     <UseRefCounting>true</UseRefCounting>
     <CodeSignEntitlements>Entitlements.plist</CodeSignEntitlements>
     <LinkMode>SdkOnly</LinkMode>
+    <AOTMode>None</AOTMode>
+    <XamMacArch>x86_64</XamMacArch>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -74,15 +80,9 @@
   <ItemGroup>
     <Compile Include="Main.cs" />
     <Compile Include="AppDelegate.cs" />
-    <Compile Include="ViewControllerReleaseWhenClosed.cs" />
-    <Compile Include="ViewControllerReleaseWhenClosed.designer.cs">
-      <DependentUpon>ViewControllerReleaseWhenClosed.cs</DependentUpon>
-    </Compile>
-    <Compile Include="ViewControllerNotReleaseWhenClosed.cs" />
-    <Compile Include="ViewControllerNotReleaseWhenClosed.designer.cs">
-      <DependentUpon>ViewControllerNotReleaseWhenClosed.cs</DependentUpon>
-    </Compile>
     <Compile Include="FinalizableView.cs" />
+    <Compile Include="ViewController.cs" />
+    <Compile Include="StressTestGCDispatch.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />
