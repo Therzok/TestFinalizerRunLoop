@@ -9,6 +9,7 @@ using ObjCRuntime;
 using System.Threading;
 using CoreFoundation;
 using CoreGraphics;
+using System.Runtime.InteropServices;
 
 namespace TestFinalizerRunloop
 {
@@ -17,7 +18,7 @@ namespace TestFinalizerRunloop
         public MyWindow(CGRect rect)
             : base(rect, NSWindowStyle.Closable | NSWindowStyle.Titled | NSWindowStyle.Resizable, NSBackingStore.Buffered, deferCreation: true)
         {
-            //ReleasedWhenClosed = releaseWhenClosed;
+            ReleasedWhenClosed = false;
             IsOpaque = true;
             IsMovable = true;
             ContentView = new NSView
@@ -29,8 +30,20 @@ namespace TestFinalizerRunloop
 
     public class WindowController : NSWindowController, INSWindowDelegate
     {
+        GCHandle gch;
+
         public WindowController(NSWindow wnd) : base(wnd)
         {
+            gch = GCHandle.Alloc(wnd);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (gch.IsAllocated)
+            {
+                gch.Free();
+            }
+            base.Dispose(disposing);
         }
 
         public override void LoadWindow()
@@ -116,21 +129,11 @@ namespace TestFinalizerRunloop
 
             var window = View.Window;
             NSApplication.SharedApplication.BeginInvokeOnMainThread(
-                async () =>
+                () =>
             {
-                //window.DangerousRetain();
                 Console.WriteLine("Closing window {0}", window.ReleasedWhenClosed);
-                //window.DangerousAutorelease();
                 var controller = (NSWindowController)window.WindowController;
-                //controller.DangerousRetain();
-                //window.DangerousRetain();
-                //controller.DangerousRetain();
-                //window.Close();
-                //window.DangerousRetain();
                 controller.Close();
-                //controller.Close();
-
-//                await Task.Delay(1000);
             });
             
             //window.DangerousAutorelease();

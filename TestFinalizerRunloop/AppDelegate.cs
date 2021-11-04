@@ -37,7 +37,7 @@ namespace TestFinalizerRunloop
             {
                 new MyWindow(new CGRect(400, 400, 400, 400))
                 {
-                    Title = "ReleaseWhenClosed",
+                    Title = "NOT ReleaseWhenClosed",
                     BackgroundColor = NSColor.Red,
                 },
                 new MyWindow(new CGRect(800, 400, 400, 400))
