@@ -20,6 +20,7 @@ namespace TestFinalizerRunloop
 
         public override void ViewWillMoveToWindow(NSWindow newWindow)
         {
+            // Remove Window usage if GCHandle is removed from WindowController
             Console.WriteLine("[{0}] ViewWillMoveToWindow {1} -> {2}", id, Window?.Title ?? "null", (newWindow?.Title ?? "null"));
             base.ViewWillMoveToWindow(newWindow);
         }
