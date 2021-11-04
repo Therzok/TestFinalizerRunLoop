@@ -128,8 +128,7 @@ namespace TestFinalizerRunloop
 
 
             var window = View.Window;
-            NSApplication.SharedApplication.BeginInvokeOnMainThread(
-                () =>
+            NSApplication.SharedApplication.BeginInvokeOnMainThread(() =>
             {
                 Console.WriteLine("Closing window {0}", window.ReleasedWhenClosed);
                 var controller = (NSWindowController)window.WindowController;

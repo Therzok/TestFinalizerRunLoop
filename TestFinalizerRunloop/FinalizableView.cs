@@ -20,7 +20,7 @@ namespace TestFinalizerRunloop
 
         public override void ViewWillMoveToWindow(NSWindow newWindow)
         {
-            Console.WriteLine("[{0}] ViewWillMoveToWindow {1}", id, (newWindow?.Title ?? "null"));
+            Console.WriteLine("[{0}] ViewWillMoveToWindow {1} -> {2}", id, Window?.Title ?? "null", (newWindow?.Title ?? "null"));
             base.ViewWillMoveToWindow(newWindow);
         }
     }

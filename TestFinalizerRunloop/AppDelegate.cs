@@ -54,13 +54,11 @@ namespace TestFinalizerRunloop
                 var window = controller.Window;
                 window.ReleasedWhenClosed = true;
 
+                // this causes ref cycle if used from managed
                 objc_msgSend(window.Handle, Selector.GetHandle("setDelegate:"), controller.Handle);
                 objc_msgSend(window.Handle, Selector.GetHandle("setWindowController:"), controller.Handle);
-
-                // this causes ref cycle
                 //controller.Window.WeakDelegate = controller;
 
-                
                 var viewController = new ViewController(window.ContentView);
                 controller.ContentViewController = viewController;
             }
@@ -70,16 +68,6 @@ namespace TestFinalizerRunloop
                 var wnd = (NSWindow)args.Notification.Object;
                 Console.WriteLine("Controller {0}", wnd.WindowController);
                 Console.WriteLine("Closing {0} - ReleaseWhenClosed {1}", wnd, wnd.ReleasedWhenClosed);
-
-                //var del = (AppDelegate)NSApplication.SharedApplication.Delegate;
-                //for (int i = 0; i < del._controllers.Length; ++i)
-                //{
-                //    ref var controller = ref del._controllers[i];
-                //    if (controller == wnd.WindowController)
-                //    {
-                //        controller = null;
-                //    }
-                //}
 
                 //objc_msgSend(wnd.Handle, ObjCRuntime.Selector.GetHandle("setContentView:"), IntPtr.Zero);
                 //wnd.ContentView = null; // xammac throws...
@@ -114,7 +102,7 @@ namespace TestFinalizerRunloop
 
             static async Task WaitForGC()
             {
-                // If this is run on the UI thread, hello crash.
+                // If this is run on the UI thread and no GCHandle in WindowController, hello crash.
                 while (true)
                 {
                     await Task.Delay(1000);
@@ -125,8 +113,6 @@ namespace TestFinalizerRunloop
                         _ = new int[10_000_000];
 
                     //System.GC.Collect();
-
-                    // WaitForPendingFinalizers crashes!
                     //System.GC.WaitForPendingFinalizers();
                 }
             }
