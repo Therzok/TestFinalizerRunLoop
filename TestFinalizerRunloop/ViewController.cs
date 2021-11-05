@@ -30,6 +30,7 @@ namespace TestFinalizerRunloop
 
     public class WindowController : NSWindowController, INSWindowDelegate
     {
+        // FIXME: Comment the GCHandle code to show crash
         GCHandle gch;
 
         public WindowController(NSWindow wnd) : base(wnd)

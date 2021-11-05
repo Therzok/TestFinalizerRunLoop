@@ -52,7 +52,8 @@ namespace TestFinalizerRunloop
             foreach (var controller in _controllers)
             {
                 var window = controller.Window;
-                window.ReleasedWhenClosed = true;
+                // FIXME: Comment GCHandle in ViewController to see managed crash, uncomment this to see native crash.
+                //window.ReleasedWhenClosed = true;
 
                 // this causes ref cycle if used from managed
                 objc_msgSend(window.Handle, Selector.GetHandle("setDelegate:"), controller.Handle);
